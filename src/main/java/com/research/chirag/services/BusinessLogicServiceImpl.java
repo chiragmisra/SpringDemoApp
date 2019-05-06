@@ -7,8 +7,10 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import com.google.gson.Gson;
 import com.research.chirag.beans.ComplexCriteria;
@@ -40,8 +42,7 @@ public class BusinessLogicServiceImpl implements BusinessLogicService {
 		if (AVAILABLE_PROPERTY_LIST.stream().anyMatch(x -> x.equalsIgnoreCase(criteria.getPropertyName()))
 				&& AVAILABLE_COMPARISON_OPERATORS_LIST.stream().anyMatch(x -> x.equalsIgnoreCase(criteria.getOperator()))) {
 
-			Predicate<Opportunity> predicate = getPredicate(criteria.getPropertyName(), criteria.getPropertyValue(),
-					criteria.getOperator());
+			Predicate<Opportunity> predicate = getPredicate(criteria.getPropertyName(), criteria.getPropertyValue(), criteria.getOperator());
 
 			if (predicate == null) {
 				return null;
@@ -55,8 +56,28 @@ public class BusinessLogicServiceImpl implements BusinessLogicService {
 	
 	@Override
 	public List<Opportunity> applyComplexSearchCriteria(ComplexCriteria criterias) {
+		if (validateComplexCriteria(criterias)) {
+			List<Predicate<Opportunity>> predicates = getComplexPredicateList(criterias);
+			Predicate<Opportunity> predicate = combineFilters(criterias.getLogicalOperator(), predicates);
+			return getOpportunities().stream().filter(predicate).collect(Collectors.<Opportunity>toList());
+		}	
 		
 		return null;
+	}
+	
+	private Predicate<Opportunity> combineFilters(String operator, List<Predicate<Opportunity>> predicates) {
+		Predicate<Opportunity> p = null;
+		if(operator.equalsIgnoreCase(AND))
+			p = predicates.stream().reduce(Predicate::and).orElse(x -> true);
+		if(operator.equalsIgnoreCase(OR))
+			p = predicates.stream().reduce(Predicate::or).orElse(x -> false);
+		if(operator.equalsIgnoreCase(NOT))
+			p = predicates.stream().reduce(Predicate::and).orElse(x-> true).negate();
+        return p;
+    }
+	
+	private List<Predicate<Opportunity>> getComplexPredicateList(ComplexCriteria criterias) {
+		return criterias.getCriterias().stream().map(c -> getPredicate(c.getPropertyName(), c.getPropertyValue(), c.getOperator())).collect(Collectors.toList());
 	}
 	
 	private Predicate<Opportunity> getPredicate(String name, String value, String operator) {
@@ -118,5 +139,31 @@ public class BusinessLogicServiceImpl implements BusinessLogicService {
 			default :
 				return null;			
 		}
+	}
+	
+	private boolean validateComplexCriteria(ComplexCriteria criterias) {
+		List<Criteria> criteriaList = criterias.getCriterias();
+		boolean propName = true;
+		boolean compOp = true;
+		if (CollectionUtils.isNotEmpty(criteriaList) && !StringUtils.isEmpty(criterias.getLogicalOperator())) {
+			if (criterias.getCriterias().size() >=2) {
+					for (Criteria cr : criterias.getCriterias()) {
+						if(!AVAILABLE_PROPERTY_LIST.contains(cr.getPropertyName())) {
+							propName = false;
+						}
+					}
+				
+					for (Criteria cr : criterias.getCriterias()) {
+						if(!AVAILABLE_COMPARISON_OPERATORS_LIST.contains(cr.getOperator())) {
+							compOp = false;
+						}
+					}
+				
+				if(propName && compOp &&  AVAILABLE_LOGIC_OPERATORS_LIST.stream().anyMatch(x -> x.equalsIgnoreCase(criterias.getLogicalOperator()))) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 }

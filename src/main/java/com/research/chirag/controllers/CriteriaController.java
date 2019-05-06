@@ -30,8 +30,9 @@ public class CriteriaController {
 	}
 	
 	@ResponseBody
-	@RequestMapping(method = RequestMethod.POST, value="/search" , consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	@RequestMapping(method = RequestMethod.POST, value="/complexSearch" , consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public List<Opportunity> complexSearch(@RequestBody ComplexCriteria criterias) {
+		System.out.println("here: "+criterias);
 		return service.applyComplexSearchCriteria(criterias);
 	}
 
