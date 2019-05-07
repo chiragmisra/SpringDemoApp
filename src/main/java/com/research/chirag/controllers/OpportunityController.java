@@ -24,14 +24,12 @@ public class OpportunityController {
 	@ResponseBody
 	@RequestMapping(method = RequestMethod.POST, value="/register" , consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public String registerOpportunity(@RequestBody OpportunityWrapper opportunities) {
-		System.out.println("In register"+opportunities.getOpportunities());
 		return service.registerOpportunities(opportunities.getOpportunities());
 	}
 	
 	@ResponseBody
 	@RequestMapping(method = RequestMethod.GET, value="/list" ,produces = MediaType.APPLICATION_JSON_VALUE)
 	public List<Opportunity> getOpportunities() {
-		System.out.println("In list");
 		return service.getOpportunities();
 	}
 }
